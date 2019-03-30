@@ -5,10 +5,10 @@ import time
 from scipy import stats
 from scipy.stats import skew #for some statistics
 from sklearn.preprocessing import LabelEncoder
-from sklearn.linear_model import Lasso
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_squared_error
+from sklearn.ensemble import GradientBoostingRegressor
 
 dirname = os.path.dirname(os.path.abspath(__file__))
 train_file = os.path.join(dirname, 'input/train.csv')
@@ -100,15 +100,18 @@ print(all_data.shape)
 train = all_data[:ntrain]
 test = all_data[ntrain:]
 
-lasso = make_pipeline(RobustScaler(), Lasso(alpha =0.0005, random_state=1))
-lasso.fit(train.values, y_train)
-train_pred = lasso.predict(train.values)
+GBoost = GradientBoostingRegressor(n_estimators=3000, learning_rate=0.05,
+                                   max_depth=4, max_features='sqrt',
+                                   min_samples_leaf=15, min_samples_split=10, 
+                                   loss='huber', random_state =5)
+GBoost.fit(train.values, y_train)
+train_pred = GBoost.predict(train.values)
 
 
 execTime = []
 for i in range(10) :
     start = time.time()
-    test_pred = np.expm1(lasso.predict(test.values))
+    test_pred = np.expm1(GBoost.predict(test.values))
     end = time.time()
     execTime.append(end - start)
 
@@ -135,7 +138,7 @@ for i in range(len(train_pred)) :
 averagePriceGap = np.average(salePriceGap)
 averagePctGap = np.average(pctGap)
 
-print(averagePctGap)
+print("AveragePctGap : {}".format(averagePctGap))
 
 print("AveragePriceGap : {} \nMaxPriceGap : {} \nMinPriceGap : {}".format(averagePriceGap, maxPriceGap, minPriceGap))
 
@@ -147,7 +150,7 @@ print(rmsle(y_train, train_pred))
 sub = pd.DataFrame()
 sub['Id'] = test_ID
 sub['SalePrice'] = test_pred
-sub.to_csv('submission.csv',index=False)
+sub.to_csv('submissionGBoost.csv',index=False)
 
 gap = pd.DataFrame()
 gap['Id'] = train_ID_withDrop
@@ -155,4 +158,4 @@ gap['pctGap'] = pctGap
 gap['realSalePrice'] = np.expm1(y_train)
 gap['predictedSalePrice'] = np.expm1(train_pred)
 gap = gap[gap['pctGap'] > 0.25]
-gap.to_csv('pctgap.csv',index=False)
+gap.to_csv('pctgapGBoost.csv',index=False)
